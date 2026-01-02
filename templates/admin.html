@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chairman POS - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <style>
+        body{font-family:'Segoe UI',system-ui,sans-serif}
+        .sidebar{width:250px;transition:width 0.3s}
+        .sidebar.collapsed{width:70px}
+        .sidebar.collapsed .nav-text{display:none}
+        .sidebar.collapsed .logo-text{display:none}
+        .main-content{margin-left:250px;transition:margin-left 0.3s}
+        .main-content.expanded{margin-left:70px}
+        .stat-card{transition:transform 0.2s,box-shadow 0.2s}
+        .stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,0.15)}
+        .table-container{max-height:500px;overflow-y:auto}
+        .modal{display:none}
+        .modal.active{display:flex}
+        .tab-btn.active{border-bottom:3px solid #dc2626;color:#dc2626}
+        .low-stock{background:#fef2f2}
+        .badge{padding:2px 8px;border-radius:12px;font-size:11px}
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed left-0 top-0 h-full bg-gradient-to-b from-gray-900 to-gray-800 text-white z-40">
+        <div class="p-4 border-b border-gray-700 flex items-center gap-3">
+            <i class="bi bi-shop text-2xl text-red-500"></i>
+            <span class="logo-text font-bold text-lg">Chairman POS</span>
+        </div>
+        
+        <nav class="p-3">
+            <ul class="space-y-1">
+                <li>
+                    <a href="#" onclick="showSection('dashboard')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                        <i class="bi bi-speedometer2 text-xl"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="showSection('sales')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                        <i class="bi bi-receipt text-xl"></i>
+                        <span class="nav-text">Sales</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="showSection('products')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                        <i class="bi bi-box-seam text-xl"></i>
+                        <span class="nav-text">Products</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="showSection('inventory')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                        <i class="bi bi-clipboard-data text-xl"></i>
+                        <span class="nav-text">Inventory</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="showSection('reports')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                        <i class="bi bi-graph-up-arrow text-xl"></i>
+                        <span class="nav-text">Reports</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="showSection('analytics')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                        <i class="bi bi-pie-chart text-xl"></i>
+                        <span class="nav-text">Analytics</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="showSection('settings')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition">
+                        <i class="bi bi-gear text-xl"></i>
+                        <span class="nav-text">Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-700">
+            <a href="/" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition text-green-400">
+                <i class="bi bi-cart3 text-xl"></i>
+                <span class="nav-text">Go to POS</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="main-content min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center sticky top-0 z-30">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="text-gray-600 hover:text-gray-800">
+                    <i class="bi bi-list text-2xl"></i>
+                </button>
+                <h1 id="pageTitle" class="text-xl font-bold text-gray-800">Dashboard</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- Database Status -->
+                <div class="flex items-center gap-2">
+                    <div id="dbStatus" class="w-2 h-2 rounded-full bg-red-500"></div>
+                    <span id="dbStatusText" class="text-xs text-gray-600">Connecting...</span>
+                </div>
+                
+                <!-- Notifications -->
+                <div class="relative">
+                    <button onclick="toggleNotifications()" class="relative text-gray-600 hover:text-gray-800">
+                        <i class="bi bi-bell text-xl"></i>
+                        <span id="notifBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                    <div id="notifDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-50">
+                        <div class="p-3 border-b font-semibold">Notifications</div>
+                        <div id="notifList" class="max-h-64 overflow-y-auto">
+                            <!-- Notifications will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- User -->
+                <div class="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-full">
+                    <i class="bi bi-person-circle text-gray-600"></i>
+                    <span class="text-sm font-medium">Admin</span>
+                </div>
+                
+                <!-- Date -->
+                <div class="text-sm text-gray-500">
+                    <span id="currentDate"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section id="section-dashboard" class="section p-6">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div class="stat-card bg-white rounded-xl p-6 shadow-sm border-l-4 border-blue-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">Today's Sales</p>
+                            <h3 class="text-2xl font-bold mt-1" id="todaySales">0.00</h3>
+                            <p class="text-xs text-green-600 mt-1"><i class="bi bi-arrow-up"></i> <span id="salesGrowth">0%</span> from yesterday</p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <i class="bi bi-cash-stack text-blue-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card bg-white rounded-xl p-6 shadow-sm border-l-4 border-green-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">Today's Profit</p>
+                            <h3 class="text-2xl font-bold mt-1" id="todayProfit">0.00</h3>
+                            <p class="text-xs text-green-600 mt-1"><i class="bi bi-arrow-up"></i> <span id="profitMargin">0%</span> margin</p>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <i class="bi bi-graph-up text-green-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card bg-white rounded-xl p-6 shadow-sm border-l-4 border-purple-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">Transactions</p>
+                            <h3 class="text-2xl font-bold mt-1" id="todayTransactions">0</h3>
+                            <p class="text-xs text-gray-500 mt-1">Total orders today</p>
+                        </div>
+                        <div class="bg-purple-100 p-3 rounded-lg">
+                            <i class="bi bi-receipt text-purple-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card bg-white rounded-xl p-6 shadow-sm border-l-4 border-red-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">Low Stock Items</p>
+                            <h3 class="text-2xl font-bold mt-1" id="lowStockCount">0</h3>
+                            <p class="text-xs text-red-600 mt-1">Need restocking</p>
+                        </div>
+                        <div class="bg-red-100 p-3 rounded-lg">
+                            <i class="bi bi-exclamation-triangle text-red-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Sales Chart -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800">Sales Overview</h3>
+                        <select id="salesChartPeriod" onchange="updateSalesChart()" class="border rounded-lg px-3 py-1 text-sm">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 3 Months</option>
+                        </select>
+                    </div>
+                    <canvas id="salesChart" height="250"></canvas>
+                </div>
+                
+                <!-- Profit Chart -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800">Profit Analysis</h3>
+                        <select id="profitChartPeriod" onchange="updateProfitChart()" class="border rounded-lg px-3 py-1 text-sm">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30">Last 30 Days</option>
+                            <option value="90">Last 3 Months</option>
+                        </select>
+                    </div>
+                    <canvas id="profitChart" height="250"></canvas>
+                </div>
+            </div>
+
+            <!-- Bottom Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Recent Sales -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800">Recent Sales</h3>
+                        <a href="#" onclick="showSection('sales')" class="text-red-600 text-sm hover:underline">View All</a>
+                    </div>
+                    <div class="table-container">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Sale ID</th>
+                                    <th class="px-4 py-3 text-left">Time</th>
+                                    <th class="px-4 py-3 text-left">Items</th>
+                                    <th class="px-4 py-3 text-right">Total</th>
+                                    <th class="px-4 py-3 text-center">Payment</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentSalesTable" class="divide-y">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Top Products -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-gray-800">Top Products</h3>
+                        <span class="text-xs text-gray-500">Today</span>
+                    </div>
+                    <div id="topProductsList" class="space-y-3">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sales Section -->
+        <section id="section-sales" class="section hidden p-6">
+            <div class="bg-white rounded-xl shadow-sm">
+                <!-- Filters -->
+                <div class="p-4 border-b flex flex-wrap gap-4 items-center">
+                    <div>
+                        <label class="text-xs text-gray-500">From</label>
+                        <input type="date" id="salesDateFrom" class="border rounded-lg px-3 py-2 text-sm" onchange="filterSales()">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">To</label>
+                        <input type="date" id="salesDateTo" class="border rounded-lg px-3 py-2 text-sm" onchange="filterSales()">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Payment</label>
+                        <select id="salesPaymentFilter" class="border rounded-lg px-3 py-2 text-sm" onchange="filterSales()">
+                            <option value="">All</option>
+                            <option value="cash">Cash</option>
+                            <option value="mpesa">M-Pesa</option>
+                        </select>
+                    </div>
+                    <div class="flex-1"></div>
+                    <button onclick="exportSales()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+                </div>
+                
+                <!-- Sales Table -->
+                <div class="table-container">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Sale ID</th>
+                                <th class="px-4 py-3 text-left">Date & Time</th>
+                                <th class="px-4 py-3 text-left">Items</th>
+                                <th class="px-4 py-3 text-right">Total</th>
+                                <th class="px-4 py-3 text-right">Profit</th>
+                                <th class="px-4 py-3 text-center">Payment</th>
+                                <th class="px-4 py-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesTable" class="divide-y">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Sales Summary -->
+                <div class="p-4 border-t bg-gray-50 flex justify-between items-center">
+                    <span id="salesCount" class="text-sm text-gray-600">0 sales</span>
+                    <div class="flex gap-6">
+                        <div class="text-right">
+                            <div class="text-xs text-gray-500">Total Sales</div>
+                            <div class="font-bold text-lg" id="totalSalesAmount">0.00</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs text-gray-500">Total Profit</div>
+                            <div class="font-bold text-lg text-green-600" id="totalProfitAmount">0.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Products Section -->
+        <section id="section-products" class="section hidden p-6">
+            <div class="bg-white rounded-xl shadow-sm">
+                <!-- Header -->
+                <div class="p-4 border-b flex justify-between items-center">
+                    <div class="flex gap-2">
+                        <input type="text" id="productSearch" placeholder="Search products..." 
+                               class="border rounded-lg px-4 py-2 text-sm w-64" oninput="searchProducts()">
+                    </div>
+                    <button onclick="openProductModal()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700">
+                        <i class="bi bi-plus-lg"></i> Add Product
+                    </button>
+                </div>
+                
+                <!-- Products Table -->
+                <div class="table-container">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Barcode</th>
+                                <th class="px-4 py-3 text-left">Product Name</th>
+                                <th class="px-4 py-3 text-right">Cost Price</th>
+                                <th class="px-4 py-3 text-right">Sell Price</th>
+                                <th class="px-4 py-3 text-right">Profit</th>
+                                <th class="px-4 py-3 text-center">Stock</th>
+                                <th class="px-4 py-3 text-center">Status</th>
+                                <th class="px-4 py-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTable" class="divide-y">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Inventory Section -->
+        <section id="section-inventory" class="section hidden p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Products</p>
+                            <h3 class="text-2xl font-bold" id="totalProducts">0</h3>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <i class="bi bi-box text-blue-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Stock Value</p>
+                            <h3 class="text-2xl font-bold" id="stockValue">0.00</h3>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <i class="bi bi-currency-dollar text-green-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Low Stock Alerts</p>
+                            <h3 class="text-2xl font-bold text-red-600" id="lowStockAlerts">0</h3>
+                        </div>
+                        <div class="bg-red-100 p-3 rounded-lg">
+                            <i class="bi bi-exclamation-circle text-red-500 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Low Stock Products -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 class="font-bold text-gray-800 mb-4"><i class="bi bi-exclamation-triangle text-red-500"></i> Low Stock Products</h3>
+                <div class="table-container">
+                    <table class="w-full text-sm">
+                        <thead class="bg-red-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Product</th>
+                                <th class="px-4 py-3 text-center">Current Stock</th>
+                                <th class="px-4 py-3 text-center">Min Level</th>
+                                <th class="px-4 py-3 text-center">Status</th>
+                                <th class="px-4 py-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lowStockTable" class="divide-y">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Stock Movement -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-800">Stock Movement</h3>
+                    <button onclick="openStockModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+                        <i class="bi bi-plus-lg"></i> Add Stock
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 text-left">Date</th>
+                                <th class="px-4 py-3 text-left">Product</th>
+                                <th class="px-4 py-3 text-center">Type</th>
+                                <th class="px-4 py-3 text-center">Quantity</th>
+                                <th class="px-4 py-3 text-left">Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stockMovementTable" class="divide-y">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="section-reports" class="section hidden p-6">
+            <!-- Report Tabs -->
+            <div class="bg-white rounded-xl shadow-sm mb-6">
+                <div class="flex border-b">
+                    <button class="tab-btn active px-6 py-3 font-medium" onclick="showReport('daily')">Daily Report</button>
+                    <button class="tab-btn px-6 py-3 font-medium" onclick="showReport('weekly')">Weekly Report</button>
+                    <button class="tab-btn px-6 py-3 font-medium" onclick="showReport('monthly')">Monthly Report</button>
+                    <button class="tab-btn px-6 py-3 font-medium" onclick="showReport('product')">Product Report</button>
+                </div>
+                
+                <!-- Daily Report -->
+                <div id="report-daily" class="report-content p-6">
+                    <div class="flex gap-4 mb-6">
+                        <input type="date" id="dailyReportDate" class="border rounded-lg px-4 py-2" onchange="loadDailyReport()">
+                        <button onclick="printReport('daily')" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+                            <i class="bi bi-printer"></i> Print
+                        </button>
+                    </div>
+                    <div id="dailyReportContent">
+                        <!-- Report content will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Weekly Report -->
+                <div id="report-weekly" class="report-content hidden p-6">
+                    <div id="weeklyReportContent"></div>
+                </div>
+                
+                <!-- Monthly Report -->
+                <div id="report-monthly" class="report-content hidden p-6">
+                    <div class="flex gap-4 mb-6">
+                        <select id="monthlyReportMonth" class="border rounded-lg px-4 py-2" onchange="loadMonthlyReport()">
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                        <select id="monthlyReportYear" class="border rounded-lg px-4 py-2" onchange="loadMonthlyReport()">
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                        </select>
+                    </div>
+                    <div id="monthlyReportContent"></div>
+                </div>
+                
+                <!-- Product Report -->
+                <div id="report-product" class="report-content hidden p-6">
+                    <div class="flex gap-4 mb-6">
+                        <select id="productReportSelect" class="border rounded-lg px-4 py-2 w-64" onchange="loadProductReport()">
+                            <option value="">Select Product</option>
+                        </select>
+                    </div>
+                    <div id="productReportContent"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics Section -->
+        <section id="section-analytics" class="section hidden p-6">
+            <!-- Yearly Overview -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-800">Yearly Sales Overview</h3>
+                    <select id="analyticsYear" onchange="loadYearlyAnalytics()" class="border rounded-lg px-3 py-2">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+                <canvas id="yearlyChart" height="300"></canvas>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Sales by Payment Method -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-800 mb-4">Sales by Payment Method</h3>
+                    <canvas id="paymentMethodChart" height="250"></canvas>
+                </div>
+                
+                <!-- Top Selling Products -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-800 mb-4">Top 10 Selling Products</h3>
+                    <canvas id="topProductsChart" height="250"></canvas>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Sales by Hour -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-800 mb-4">Sales by Hour of Day</h3>
+                    <canvas id="hourlyChart" height="250"></canvas>
+                </div>
+                
+                <!-- Profit Trend -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-800 mb-4">Profit Trend</h3>
+                    <canvas id="profitTrendChart" height="250"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="section-settings" class="section hidden p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Store Settings -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-800 mb-4"><i class="bi bi-shop"></i> Store Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
+                            <input type="text" id="storeName" class="w-full border rounded-lg px-4 py-2" value="Chairman POS">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="text" id="storePhone" class="w-full border rounded-lg px-4 py-2" value="0700-000-000">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                            <textarea id="storeAddress" class="w-full border rounded-lg px-4 py-2" rows="2"></textarea>
+                        </div>
+                        <button onclick="saveStoreSettings()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Inventory Settings -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-800 mb-4"><i class="bi bi-box"></i> Inventory Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Low Stock Alert Level</label>
+                            <input type="number" id="lowStockLevel" class="w-full border rounded-lg px-4 py-2" value="10">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Default Tax Rate (%)</label>
+                            <input type="number" id="taxRate" class="w-full border rounded-lg px-4 py-2" value="0">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="enableNotifications" checked>
+                            <label class="text-sm text-gray-700">Enable low stock notifications</label>
+                        </div>
+                        <button onclick="saveInventorySettings()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Receipt Settings -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-800 mb-4"><i class="bi bi-receipt"></i> Receipt Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Receipt Header</label>
+                            <input type="text" id="receiptHeader" class="w-full border rounded-lg px-4 py-2" value="Thank you for shopping!">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Receipt Footer</label>
+                            <input type="text" id="receiptFooter" class="w-full border rounded-lg px-4 py-2" value="Please come again">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="printLogo" checked>
+                            <label class="text-sm text-gray-700">Print store logo</label>
+                        </div>
+                        <button onclick="saveReceiptSettings()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Backup & Export -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="font-bold text-gray-800 mb-4"><i class="bi bi-cloud-download"></i> Backup & Export</h3>
+                    <div class="space-y-4">
+                        <button onclick="exportAllData()" class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2">
+                            <i class="bi bi-download"></i> Export All Data (CSV)
+                        </button>
+                        <button onclick="backupDatabase()" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2">
+                            <i class="bi bi-cloud-arrow-up"></i> Backup Database
+                        </button>
+                        <button onclick="importData()" class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 flex items-center justify-center gap-2">
+                            <i class="bi bi-upload"></i> Import Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+            <div class="bg-red-700 text-white px-5 py-3 rounded-t-xl flex justify-between items-center">
+                <span class="font-bold" id="productModalTitle">Add Product</span>
+                <button onclick="closeProductModal()" class="hover:bg-white/20 rounded p-1"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <input type="hidden" id="productId">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Barcode *</label>
+                        <input type="text" id="productBarcode" class="w-full border rounded-lg px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
+                        <input type="text" id="productName" class="w-full border rounded-lg px-3 py-2" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Cost Price *</label>
+                        <input type="number" step="0.01" id="productCost" class="w-full border rounded-lg px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sell Price *</label>
+                        <input type="number" step="0.01" id="productPrice" class="w-full border rounded-lg px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Stock *</label>
+                        <input type="number" id="productStock" class="w-full border rounded-lg px-3 py-2" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select id="productCategory" class="w-full border rounded-lg px-3 py-2">
+                            <option value="">Select Category</option>
+                            <option value="medicine">Medicine</option>
+                            <option value="cosmetics">Cosmetics</option>
+                            <option value="supplements">Supplements</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Min Stock Level</label>
+                        <input type="number" id="productMinStock" class="w-full border rounded-lg px-3 py-2" value="10">
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="closeProductModal()" class="flex-1 py-2 bg-gray-200 rounded-lg font-semibold hover:bg-gray-300">Cancel</button>
+                    <button onclick="saveProduct()" class="flex-1 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700">Save Product</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Modal -->
+    <div id="stockModal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div class="bg-blue-700 text-white px-5 py-3 rounded-t-xl flex justify-between items-center">
+                <span class="font-bold">Add Stock</span>
+                <button onclick="closeStockModal()" class="hover:bg-white/20 rounded p-1"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                    <select id="stockProduct" class="w-full border rounded-lg px-3 py-2">
+                        <option value="">Select Product</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                    <input type="number" id="stockQuantity" class="w-full border rounded-lg px-3 py-2" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Reference (Invoice No.)</label>
+                    <input type="text" id="stockReference" class="w-full border rounded-lg px-3 py-2">
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button onclick="closeStockModal()" class="flex-1 py-2 bg-gray-200 rounded-lg font-semibold hover:bg-gray-300">Cancel</button>
+                    <button onclick="addStock()" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">Add Stock</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sale Detail Modal -->
+    <div id="saleDetailModal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+            <div class="bg-gray-800 text-white px-5 py-3 rounded-t-xl flex justify-between items-center">
+                <span class="font-bold">Sale Details</span>
+                <button onclick="closeSaleDetailModal()" class="hover:bg-white/20 rounded p-1"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="p-5" id="saleDetailContent">
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed bottom-4 right-4 px-5 py-3 rounded-lg shadow-lg text-white z-50"></div>
+
+    <script>
+        // ========== GLOBALS ==========
+        let products = [];
+        let sales = [];
+        let stockMovements = [];
+        let charts = {};
+        const LOW_STOCK_LEVEL = 10;
+
+        // ========== INITIALIZATION ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current date
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-GB', {
+                weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+            });
+            
+            // Check database connection
+            checkDatabaseStatus();
+            
+            // Set date inputs
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('salesDateFrom').value = today;
+            document.getElementById('salesDateTo').value = today;
+            document.getElementById('dailyReportDate').value = today;
+            
+            // Load data
+            loadProducts();
+            loadSales();
+            loadDashboard();
+            initCharts();
+        });
+
+        // ========== DATABASE STATUS ==========
+        async function checkDatabaseStatus() {
+            try {
+                const res = await fetch('/api/products');
+                const data = await res.json();
+                if (data.success) {
+                    setDbStatus(true, 'Connected');
+                } else {
+                    setDbStatus(false, 'Error');
+                }
+            } catch(e) {
+                setDbStatus(false, 'Offline');
+            }
+        }
+
+        function setDbStatus(connected, text) {
+            const statusDot = document.getElementById('dbStatus');
+            const statusText = document.getElementById('dbStatusText');
+            if (connected) {
+                statusDot.className = 'w-2 h-2 rounded-full bg-green-500';
+                statusText.textContent = 'Database: ' + text;
+            } else {
+                statusDot.className = 'w-2 h-2 rounded-full bg-red-500';
+                statusText.textContent = 'Database: ' + text;
+            }
+        }
+
+        // ========== API CALLS ==========
+        async function loadProducts() {
+            try {
+                const res = await fetch('/api/admin/products');
+                const data = await res.json();
+                if (data.success) {
+                    products = data.products.map(p => ({
+                        id: p.id,
+                        barcode: p.barcode || p.code || '',
+                        code: p.code || '',
+                        description: p.name || p.description || '',
+                        name: p.name || p.description || '',
+                        cost: parseFloat(p.cost_price) || 0,
+                        cost_price: parseFloat(p.cost_price) || 0,
+                        price: parseFloat(p.price) || 0,
+                        stock: p.quantity_in_stock || 0,
+                        quantity_in_stock: p.quantity_in_stock || 0,
+                        minStock: p.reorder_level || 10,
+                        reorder_level: p.reorder_level || 10,
+                        category: p.category || '',
+                        is_active: p.is_active !== false
+                    }));
+                    console.log('✓ Loaded ' + products.length + ' products from database');
+                    renderProducts();
+                    updateProductSelects();
+                    updateLowStockAlerts();
+                } else {
+                    console.error('API Error:', data.error);
+                }
+            } catch(e) {
+                console.error('Failed to load products:', e);
+                showToast('Error loading products: ' + e.message, 'red');
+            }
+        }
+
+        async function loadSales() {
+            try {
+                const res = await fetch('/api/admin/sales');
+                const data = await res.json();
+                if (data.success) {
+                    sales = data.sales.map(s => ({
+                        id: s.id,
+                        receipt_number: s.receipt_number,
+                        timestamp: s.created_at,
+                        items: [],
+                        total: parseFloat(s.total) || 0,
+                        subtotal: parseFloat(s.subtotal) || 0,
+                        profit: parseFloat(s.total) * 0.3 || 0,
+                        paid: parseFloat(s.paid_amount) || s.total,
+                        change: parseFloat(s.change_amount) || 0,
+                        paymentType: s.payment_method,
+                        cashier_name: s.cashier_name || 'Admin'
+                    }));
+                    console.log('✓ Loaded ' + sales.length + ' sales from database');
+                    renderSales();
+                    updateDashboardStats();
+                } else {
+                    console.error('API Error:', data.error);
+                }
+            } catch(e) {
+                console.error('Failed to load sales:', e);
+            }
+        }
+
+        function generateSampleSales() {
+            const sampleSales = [];
+            const today = new Date();
+            for (let i = 0; i < 50; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - Math.floor(Math.random() * 30));
+                date.setHours(Math.floor(Math.random() * 12) + 8, Math.floor(Math.random() * 60));
+                
+                const items = [];
+                const numItems = Math.floor(Math.random() * 4) + 1;
+                let total = 0;
+                let cost = 0;
+                
+                for (let j = 0; j < numItems; j++) {
+                    const product = products[Math.floor(Math.random() * products.length)];
+                    const qty = Math.floor(Math.random() * 3) + 1;
+                    items.push({
+                        barcode: product.barcode,
+                        description: product.description,
+                        price: product.price,
+                        cost: product.cost,
+                        qty: qty,
+                        subtotal: product.price * qty
+                    });
+                    total += product.price * qty;
+                    cost += product.cost * qty;
+                }
+                
+                sampleSales.push({
+                    id: i + 1,
+                    timestamp: date.toISOString(),
+                    items: items,
+                    total: total,
+                    cost: cost,
+                    profit: total - cost,
+                    paid: total + Math.floor(Math.random() * 50),
+                    change: Math.floor(Math.random() * 50),
+                    paymentType: Math.random() > 0.3 ? 'cash' : 'mpesa'
+                });
+            }
+            return sampleSales.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        }
+
+        async function loadDashboard() {
+            updateDashboardStats();
+            loadRecentSales();
+            loadTopProducts();
+        }
+
+        // ========== NAVIGATION ==========
+        function showSection(section) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            // Show selected section
+            document.getElementById('section-' + section).classList.remove('hidden');
+            // Update title
+            const titles = {
+                dashboard: 'Dashboard',
+                sales: 'Sales Management',
+                products: 'Product Management',
+                inventory: 'Inventory Management',
+                reports: 'Reports',
+                analytics: 'Analytics',
+                settings: 'Settings'
+            };
+            document.getElementById('pageTitle').textContent = titles[section];
+            
+            // Update active nav link
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('bg-white/10'));
+            event.target.closest('.nav-link')?.classList.add('bg-white/10');
+            
+            // Load section-specific data
+            if (section === 'analytics') loadAnalytics();
+            if (section === 'inventory') loadInventory();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.getElementById('mainContent').classList.toggle('expanded');
+        }
+
+        function toggleNotifications() {
+            document.getElementById('notifDropdown').classList.toggle('hidden');
+            loadNotifications();
+        }
+
+        // ========== DASHBOARD ==========
+        function updateDashboardStats() {
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(s => new Date(s.timestamp).toDateString() === today);
+            
+            const totalSales = todaySales.reduce((sum, s) => sum + s.total, 0);
+            const totalProfit = todaySales.reduce((sum, s) => sum + (s.profit || s.total * 0.3), 0);
+            const transactions = todaySales.length;
+            const lowStock = products.filter(p => p.stock <= (p.minStock || LOW_STOCK_LEVEL)).length;
+            
+            document.getElementById('todaySales').textContent = totalSales.toFixed(2);
+            document.getElementById('todayProfit').textContent = totalProfit.toFixed(2);
+            document.getElementById('todayTransactions').textContent = transactions;
+            document.getElementById('lowStockCount').textContent = lowStock;
+            
+            // Calculate growth
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdaySales = sales.filter(s => new Date(s.timestamp).toDateString() === yesterday.toDateString());
+            const yesterdayTotal = yesterdaySales.reduce((sum, s) => sum + s.total, 0);
+            
+            if (yesterdayTotal > 0) {
+                const growth = ((totalSales - yesterdayTotal) / yesterdayTotal * 100).toFixed(1);
+                document.getElementById('salesGrowth').textContent = (growth > 0 ? '+' : '') + growth + '%';
+            }
+            
+            if (totalSales > 0) {
+                const margin = (totalProfit / totalSales * 100).toFixed(1);
+                document.getElementById('profitMargin').textContent = margin + '%';
+            }
+        }
+
+        function loadRecentSales() {
+            const tbody = document.getElementById('recentSalesTable');
+            tbody.innerHTML = '';
+            
+            sales.slice(0, 10).forEach(sale => {
+                const date = new Date(sale.timestamp);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-3">#${sale.id}</td>
+                    <td class="px-4 py-3">${date.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}</td>
+                    <td class="px-4 py-3">${sale.items.length} items</td>
+                    <td class="px-4 py-3 text-right font-semibold">${sale.total.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="badge ${sale.paymentType === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                            ${sale.paymentType.toUpperCase()}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function loadTopProducts() {
+            const container = document.getElementById('topProductsList');
+            container.innerHTML = '';
+            
+            // Calculate product sales
+            const productSales = {};
+            const today = new Date().toDateString();
+            
+            sales.filter(s => new Date(s.timestamp).toDateString() === today).forEach(sale => {
+                sale.items.forEach(item => {
+                    if (!productSales[item.description]) {
+                        productSales[item.description] = { qty: 0, revenue: 0 };
+                    }
+                    productSales[item.description].qty += item.qty;
+                    productSales[item.description].revenue += item.subtotal;
+                });
+            });
+            
+            const sorted = Object.entries(productSales)
+                .sort((a, b) => b[1].qty - a[1].qty)
+                .slice(0, 5);
+            
+            if (sorted.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-4">No sales today</p>';
+                return;
+            }
+            
+            const maxQty = sorted[0][1].qty;
+            
+            sorted.forEach(([name, data]) => {
+                const percentage = (data.qty / maxQty * 100).toFixed(0);
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium">${name}</span>
+                        <span class="text-gray-500">${data.qty} sold</span>
+                    </div>
+                    <div class="bg-gray-200 rounded-full h-2">
+                        <div class="bg-red-500 rounded-full h-2" style="width:${percentage}%"></div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ========== CHARTS ==========
+        function initCharts() {
+            // Sales Chart
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            charts.sales = new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Sales',
+                        data: [],
+                        borderColor: '#dc2626',
+                        backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            
+            // Profit Chart
+            const profitCtx = document.getElementById('profitChart').getContext('2d');
+            charts.profit = new Chart(profitCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Profit',
+                        data: [],
+                        backgroundColor: '#22c55e'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            
+            updateSalesChart();
+            updateProfitChart();
+        }
+
+        function updateSalesChart() {
+            const days = parseInt(document.getElementById('salesChartPeriod').value);
+            const labels = [];
+            const data = [];
+            
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toDateString();
+                
+                labels.push(date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
+                
+                const dayTotal = sales
+                    .filter(s => new Date(s.timestamp).toDateString() === dateStr)
+                    .reduce((sum, s) => sum + s.total, 0);
+                data.push(dayTotal);
+            }
+            
+            charts.sales.data.labels = labels;
+            charts.sales.data.datasets[0].data = data;
+            charts.sales.update();
+        }
+
+        function updateProfitChart() {
+            const days = parseInt(document.getElementById('profitChartPeriod').value);
+            const labels = [];
+            const data = [];
+            
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toDateString();
+                
+                labels.push(date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
+                
+                const dayProfit = sales
+                    .filter(s => new Date(s.timestamp).toDateString() === dateStr)
+                    .reduce((sum, s) => sum + (s.profit || s.total * 0.3), 0);
+                data.push(dayProfit);
+            }
+            
+            charts.profit.data.labels = labels;
+            charts.profit.data.datasets[0].data = data;
+            charts.profit.update();
+        }
+
+        // ========== SALES MANAGEMENT ==========
+        function renderSales() {
+            const tbody = document.getElementById('salesTable');
+            tbody.innerHTML = '';
+            
+            let filteredSales = filterSalesData();
+            let totalAmount = 0;
+            let totalProfit = 0;
+            
+            filteredSales.forEach(sale => {
+                const date = new Date(sale.timestamp);
+                const profit = sale.profit || sale.total * 0.3;
+                totalAmount += sale.total;
+                totalProfit += profit;
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-medium">#${sale.id}</td>
+                    <td class="px-4 py-3">${date.toLocaleString('en-GB')}</td>
+                    <td class="px-4 py-3">${sale.items.length} items</td>
+                    <td class="px-4 py-3 text-right font-semibold">${sale.total.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right text-green-600">${profit.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="badge ${sale.paymentType === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                            ${sale.paymentType.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="viewSaleDetail(${sale.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="View">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button onclick="reprintReceipt(${sale.id})" class="text-gray-600 hover:text-gray-800" title="Reprint">
+                            <i class="bi bi-printer"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.getElementById('salesCount').textContent = filteredSales.length + ' sales';
+            document.getElementById('totalSalesAmount').textContent = totalAmount.toFixed(2);
+            document.getElementById('totalProfitAmount').textContent = totalProfit.toFixed(2);
+        }
+
+        function filterSalesData() {
+            const dateFrom = document.getElementById('salesDateFrom').value;
+            const dateTo = document.getElementById('salesDateTo').value;
+            const paymentFilter = document.getElementById('salesPaymentFilter').value;
+            
+            return sales.filter(sale => {
+                const saleDate = new Date(sale.timestamp).toISOString().split('T')[0];
+                
+                if (dateFrom && saleDate < dateFrom) return false;
+                if (dateTo && saleDate > dateTo) return false;
+                if (paymentFilter && sale.paymentType !== paymentFilter) return false;
+                
+                return true;
+            });
+        }
+
+        function filterSales() {
+            renderSales();
+        }
+
+        function viewSaleDetail(saleId) {
+            const sale = sales.find(s => s.id === saleId);
+            if (!sale) return;
+            
+            const date = new Date(sale.timestamp);
+            const content = document.getElementById('saleDetailContent');
+            
+            let itemsHtml = sale.items.map(item => `
+                <tr>
+                    <td class="py-2">${item.description}</td>
+                    <td class="py-2 text-center">${item.qty}</td>
+                    <td class="py-2 text-right">${item.price.toFixed(2)}</td>
+                    <td class="py-2 text-right">${item.subtotal.toFixed(2)}</td>
+                </tr>
+            `).join('');
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Sale ID:</span>
+                        <span class="font-semibold">#${sale.id}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Date & Time:</span>
+                        <span>${date.toLocaleString('en-GB')}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Payment Method:</span>
+                        <span class="badge ${sale.paymentType === 'cash' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                            ${sale.paymentType.toUpperCase()}
+                        </span>
+                    </div>
+                    <hr>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-gray-500">
+                                <th class="text-left py-2">Item</th>
+                                <th class="text-center py-2">Qty</th>
+                                <th class="text-right py-2">Price</th>
+                                <th class="text-right py-2">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemsHtml}</tbody>
+                    </table>
+                    <hr>
+                    <div class="flex justify-between font-bold text-lg">
+                        <span>Total:</span>
+                        <span class="text-red-700">Ksh ${sale.total.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>Paid:</span>
+                        <span>Ksh ${sale.paid.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>Change:</span>
+                        <span>Ksh ${sale.change.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('saleDetailModal').classList.add('active');
+        }
+
+        function closeSaleDetailModal() {
+            document.getElementById('saleDetailModal').classList.remove('active');
+        }
+
+        function exportSales() {
+            const filteredSales = filterSalesData();
+            let csv = 'Sale ID,Date,Time,Items,Total,Profit,Payment Method\n';
+            
+            filteredSales.forEach(sale => {
+                const date = new Date(sale.timestamp);
+                csv += `${sale.id},"${date.toLocaleDateString()}","${date.toLocaleTimeString()}",${sale.items.length},${sale.total.toFixed(2)},${(sale.profit || sale.total * 0.3).toFixed(2)},${sale.paymentType}\n`;
+            });
+            
+            downloadCSV(csv, 'sales_export.csv');
+        }
+
+        // ========== PRODUCTS MANAGEMENT ==========
+        function renderProducts() {
+            const tbody = document.getElementById('productsTable');
+            tbody.innerHTML = '';
+            
+            const searchQuery = document.getElementById('productSearch')?.value?.toLowerCase() || '';
+            
+            const filtered = products.filter(p => 
+                p.description.toLowerCase().includes(searchQuery) ||
+                p.barcode.includes(searchQuery)
+            );
+            
+            filtered.forEach(product => {
+                const profit = product.price - product.cost;
+                const profitMargin = ((profit / product.price) * 100).toFixed(1);
+                const isLowStock = product.stock <= (product.minStock || LOW_STOCK_LEVEL);
+                
+                const tr = document.createElement('tr');
+                tr.className = isLowStock ? 'low-stock' : 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-3"><code class="bg-gray-100 px-2 py-1 rounded">${product.barcode}</code></td>
+                    <td class="px-4 py-3 font-medium">${product.description}</td>
+                    <td class="px-4 py-3 text-right">${product.cost.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right">${product.price.toFixed(2)}</td>
+                    <td class="px-4 py-3 text-right text-green-600">${profit.toFixed(2)} (${profitMargin}%)</td>
+                    <td class="px-4 py-3 text-center ${isLowStock ? 'text-red-600 font-bold' : ''}">${product.stock}</td>
+                    <td class="px-4 py-3 text-center">
+                        ${isLowStock ? 
+                            '<span class="badge bg-red-100 text-red-700">Low Stock</span>' : 
+                            '<span class="badge bg-green-100 text-green-700">In Stock</span>'}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="editProduct(${product.id})" class="text-blue-600 hover:text-blue-800 mr-2" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button onclick="deleteProduct(${product.id})" class="text-red-600 hover:text-red-800" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function searchProducts() {
+            renderProducts();
+        }
+
+        function openProductModal(productId = null) {
+            document.getElementById('productModalTitle').textContent = productId ? 'Edit Product' : 'Add Product';
+            document.getElementById('productId').value = productId || '';
+            
+            if (productId) {
+                const product = products.find(p => p.id === productId);
+                if (product) {
+                    document.getElementById('productBarcode').value = product.barcode;
+                    document.getElementById('productName').value = product.description;
+                    document.getElementById('productCost').value = product.cost;
+                    document.getElementById('productPrice').value = product.price;
+                    document.getElementById('productStock').value = product.stock;
+                    document.getElementById('productCategory').value = product.category || '';
+                    document.getElementById('productMinStock').value = product.minStock || 10;
+                }
+            } else {
+                document.getElementById('productBarcode').value = '';
+                document.getElementById('productName').value = '';
+                document.getElementById('productCost').value = '';
+                document.getElementById('productPrice').value = '';
+                document.getElementById('productStock').value = '';
+                document.getElementById('productCategory').value = '';
+                document.getElementById('productMinStock').value = '10';
+            }
+            
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('active');
+        }
+
+        async function saveProduct() {
+            const productId = document.getElementById('productId').value;
+            const productData = {
+                code: document.getElementById('productBarcode').value,
+                name: document.getElementById('productName').value,
+                description: document.getElementById('productName').value,
+                cost_price: parseFloat(document.getElementById('productCost').value),
+                price: parseFloat(document.getElementById('productPrice').value),
+                quantity_in_stock: parseInt(document.getElementById('productStock').value),
+                category: document.getElementById('productCategory').value,
+                reorder_level: parseInt(document.getElementById('productMinStock').value),
+                barcode: document.getElementById('productBarcode').value
+            };
+            
+            if (!productData.code || !productData.name || !productData.cost_price || !productData.price) {
+                showToast('Please fill all required fields', 'red');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/admin/products' + (productId ? '/' + productId : ''), {
+                    method: productId ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productData)
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast(productId ? 'Product updated!' : 'Product added!', 'green');
+                    closeProductModal();
+                    loadProducts();
+                } else {
+                    showToast('Error: ' + data.error, 'red');
+                    console.error('API Error:', data);
+                }
+            } catch(e) {
+                showToast('Error: ' + e.message, 'red');
+                console.error('Save error:', e);
+            }
+        }
+
+        function editProduct(productId) {
+            openProductModal(productId);
+        }
+
+        async function deleteProduct(productId) {
+            if (!confirm('Are you sure you want to delete this product?')) return;
+            
+            try {
+                const res = await fetch('/api/admin/products/' + productId, { method: 'DELETE' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('Product deleted!', 'green');
+                    loadProducts();
+                } else {
+                    showToast('Error: ' + data.error, 'red');
+                }
+            } catch(e) {
+                showToast('Error: ' + e.message, 'red');
+                console.error('Delete error:', e);
+            }
+        }
+
+        function updateProductSelects() {
+            // Update all product dropdowns
+            const selects = ['stockProduct', 'productReportSelect'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">Select Product</option>';
+                    products.forEach(p => {
+                        select.innerHTML += `<option value="${p.id}">${p.description}</option>`;
+                    });
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        // ========== INVENTORY ==========
+        function loadInventory() {
+            const totalProducts = products.length;
+            const stockValue = products.reduce((sum, p) => sum + (p.cost * p.stock), 0);
+            const lowStockItems = products.filter(p => p.stock <= (p.minStock || LOW_STOCK_LEVEL));
+            
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('stockValue').textContent = stockValue.toFixed(2);
+            document.getElementById('lowStockAlerts').textContent = lowStockItems.length;
+            
+            // Render low stock table
+            const tbody = document.getElementById('lowStockTable');
+            tbody.innerHTML = '';
+            
+            lowStockItems.forEach(product => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-medium">${product.description}</td>
+                    <td class="px-4 py-3 text-center font-bold text-red-600">${product.stock}</td>
+                    <td class="px-4 py-3 text-center">${product.minStock || LOW_STOCK_LEVEL}</td>
+                    <td class="px-4 py-3 text-center">
+                        ${product.stock === 0 ? 
+                            '<span class="badge bg-red-600 text-white">Out of Stock</span>' : 
+                            '<span class="badge bg-yellow-100 text-yellow-700">Low Stock</span>'}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="quickRestock(${product.id})" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            <i class="bi bi-plus"></i> Restock
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // Render stock movements
+            renderStockMovements();
+        }
+
+        function renderStockMovements() {
+            const tbody = document.getElementById('stockMovementTable');
+            tbody.innerHTML = '';
+            
+            // Sample stock movements
+            const movements = [
+                { date: new Date(), product: 'Panadol Extra', type: 'in', quantity: 100, reference: 'INV-001' },
+                { date: new Date(Date.now() - 86400000), product: 'Amoxyl 500mg', type: 'in', quantity: 200, reference: 'INV-002' },
+                { date: new Date(Date.now() - 172800000), product: 'Paracetamol', type: 'out', quantity: 50, reference: 'SALE-123' },
+            ];
+            
+            movements.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-3">${m.date.toLocaleDateString('en-GB')}</td>
+                    <td class="px-4 py-3">${m.product}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="badge ${m.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                            ${m.type === 'in' ? 'Stock In' : 'Stock Out'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-center ${m.type === 'in' ? 'text-green-600' : 'text-red-600'}">
+                        ${m.type === 'in' ? '+' : '-'}${m.quantity}
+                    </td>
+                    <td class="px-4 py-3">${m.reference}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openStockModal() {
+            document.getElementById('stockProduct').value = '';
+            document.getElementById('stockQuantity').value = '';
+            document.getElementById('stockReference').value = '';
+            document.getElementById('stockModal').classList.add('active');
+        }
+
+        function closeStockModal() {
+            document.getElementById('stockModal').classList.remove('active');
+        }
+
+        async function addStock() {
+            const productId = document.getElementById('stockProduct').value;
+            const quantity = parseInt(document.getElementById('stockQuantity').value);
+            const reference = document.getElementById('stockReference').value;
+            
+            if (!productId || !quantity) {
+                showToast('Please fill all fields', 'red');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/admin/stock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        product_id: parseInt(productId), 
+                        quantity: quantity, 
+                        reason: reference,
+                        type: 'purchase'
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('Stock added!', 'green');
+                    closeStockModal();
+                    loadProducts();
+                    loadInventory();
+                } else {
+                    showToast('Error: ' + data.error, 'red');
+                }
+            } catch(e) {
+                showToast('Error: ' + e.message, 'red');
+                console.error('Stock error:', e);
+            }
+        }
+
+        function quickRestock(productId) {
+            document.getElementById('stockProduct').value = productId;
+            openStockModal();
+        }
+
+        function updateLowStockAlerts() {
+            const lowStockItems = products.filter(p => p.stock <= (p.minStock || LOW_STOCK_LEVEL));
+            document.getElementById('notifBadge').textContent = lowStockItems.length;
+        }
+
+        function loadNotifications() {
+            const list = document.getElementById('notifList');
+            const lowStockItems = products.filter(p => p.stock <= (p.minStock || LOW_STOCK_LEVEL));
+            
+            if (lowStockItems.length === 0) {
+                list.innerHTML = '<div class="p-4 text-gray-500 text-center">No notifications</div>';
+                return;
+            }
+            
+            list.innerHTML = lowStockItems.map(p => `
+                <div class="p-3 border-b hover:bg-gray-50 flex items-center gap-3">
+                    <div class="bg-red-100 p-2 rounded-full">
+                        <i class="bi bi-exclamation-triangle text-red-500"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-medium text-sm">${p.description}</div>
+                        <div class="text-xs text-red-600">Stock: ${p.stock} (Min: ${p.minStock || LOW_STOCK_LEVEL})</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ========== REPORTS ==========
+        function showReport(type) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.report-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('report-' + type).classList.remove('hidden');
+            
+            if (type === 'daily') loadDailyReport();
+            if (type === 'monthly') loadMonthlyReport();
+        }
+
+        function loadDailyReport() {
+            const date = document.getElementById('dailyReportDate').value;
+            const dateStr = new Date(date).toDateString();
+            
+            const daySales = sales.filter(s => new Date(s.timestamp).toDateString() === dateStr);
+            
+            const totalSales = daySales.reduce((sum, s) => sum + s.total, 0);
+            const totalProfit = daySales.reduce((sum, s) => sum + (s.profit || s.total * 0.3), 0);
+            const cashSales = daySales.filter(s => s.paymentType === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const mpesaSales = daySales.filter(s => s.paymentType === 'mpesa').reduce((sum, s) => sum + s.total, 0);
+            
+            document.getElementById('dailyReportContent').innerHTML = `
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="text-blue-600 text-sm">Total Sales</div>
+                        <div class="text-2xl font-bold">${totalSales.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="text-green-600 text-sm">Total Profit</div>
+                        <div class="text-2xl font-bold">${totalProfit.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <div class="text-purple-600 text-sm">Transactions</div>
+                        <div class="text-2xl font-bold">${daySales.length}</div>
+                    </div>
+                    <div class="bg-orange-50 rounded-lg p-4">
+                        <div class="text-orange-600 text-sm">Avg. Sale</div>
+                        <div class="text-2xl font-bold">${daySales.length ? (totalSales / daySales.length).toFixed(2) : '0.00'}</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="text-gray-600 text-sm">Cash Sales</div>
+                        <div class="text-xl font-bold">${cashSales.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <div class="text-gray-600 text-sm">M-Pesa Sales</div>
+                        <div class="text-xl font-bold">${mpesaSales.toFixed(2)}</div>
+                    </div>
+                </div>
+                <h4 class="font-bold mb-3">Sales List</h4>
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-3 py-2 text-left">ID</th>
+                            <th class="px-3 py-2 text-left">Time</th>
+                            <th class="px-3 py-2 text-left">Items</th>
+                            <th class="px-3 py-2 text-right">Total</th>
+                            <th class="px-3 py-2 text-right">Profit</th>
+                            <th class="px-3 py-2 text-center">Payment</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        ${daySales.map(s => `
+                            <tr>
+                                <td class="px-3 py-2">#${s.id}</td>
+                                <td class="px-3 py-2">${new Date(s.timestamp).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}</td>
+                                <td class="px-3 py-2">${s.items.length}</td>
+                                <td class="px-3 py-2 text-right">${s.total.toFixed(2)}</td>
+                                <td class="px-3 py-2 text-right text-green-600">${(s.profit || s.total * 0.3).toFixed(2)}</td>
+                                <td class="px-3 py-2 text-center">${s.paymentType.toUpperCase()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function loadMonthlyReport() {
+            const month = parseInt(document.getElementById('monthlyReportMonth').value);
+            const year = parseInt(document.getElementById('monthlyReportYear').value);
+            
+            const monthSales = sales.filter(s => {
+                const d = new Date(s.timestamp);
+                return d.getMonth() + 1 === month && d.getFullYear() === year;
+            });
+            
+            const totalSales = monthSales.reduce((sum, s) => sum + s.total, 0);
+            const totalProfit = monthSales.reduce((sum, s) => sum + (s.profit || s.total * 0.3), 0);
+            
+            // Group by day
+            const dailyTotals = {};
+            monthSales.forEach(s => {
+                const day = new Date(s.timestamp).getDate();
+                if (!dailyTotals[day]) dailyTotals[day] = { sales: 0, profit: 0, count: 0 };
+                dailyTotals[day].sales += s.total;
+                dailyTotals[day].profit += s.profit || s.total * 0.3;
+                dailyTotals[day].count++;
+            });
+            
+            document.getElementById('monthlyReportContent').innerHTML = `
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="text-blue-600 text-sm">Total Sales</div>
+                        <div class="text-2xl font-bold">${totalSales.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="text-green-600 text-sm">Total Profit</div>
+                        <div class="text-2xl font-bold">${totalProfit.toFixed(2)}</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <div class="text-purple-600 text-sm">Transactions</div>
+                        <div class="text-2xl font-bold">${monthSales.length}</div>
+                    </div>
+                    <div class="bg-orange-50 rounded-lg p-4">
+                        <div class="text-orange-600 text-sm">Daily Avg.</div>
+                        <div class="text-2xl font-bold">${Object.keys(dailyTotals).length ? (totalSales / Object.keys(dailyTotals).length).toFixed(2) : '0.00'}</div>
+                    </div>
+                </div>
+                <h4 class="font-bold mb-3">Daily Breakdown</h4>
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-3 py-2 text-left">Day</th>
+                            <th class="px-3 py-2 text-center">Transactions</th>
+                            <th class="px-3 py-2 text-right">Sales</th>
+                            <th class="px-3 py-2 text-right">Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        ${Object.entries(dailyTotals).sort((a,b) => a[0] - b[0]).map(([day, data]) => `
+                            <tr>
+                                <td class="px-3 py-2">${day}/${month}/${year}</td>
+                                <td class="px-3 py-2 text-center">${data.count}</td>
+                                <td class="px-3 py-2 text-right">${data.sales.toFixed(2)}</td>
+                                <td class="px-3 py-2 text-right text-green-600">${data.profit.toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // ========== ANALYTICS ==========
+        function loadAnalytics() {
+            loadYearlyAnalytics();
+            loadPaymentMethodChart();
+            loadTopProductsChart();
+            loadHourlyChart();
+            loadProfitTrendChart();
+        }
+
+        function loadYearlyAnalytics() {
+            const year = parseInt(document.getElementById('analyticsYear').value);
+            const yearSales = sales.filter(s => new Date(s.timestamp).getFullYear() === year);
+            
+            const monthlyData = Array(12).fill(0);
+            const monthlyProfit = Array(12).fill(0);
+            
+            yearSales.forEach(s => {
+                const month = new Date(s.timestamp).getMonth();
+                monthlyData[month] += s.total;
+                monthlyProfit[month] += s.profit || s.total * 0.3;
+            });
+            
+            if (charts.yearly) charts.yearly.destroy();
+            
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+            charts.yearly = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [
+                        {
+                            label: 'Sales',
+                            data: monthlyData,
+                            backgroundColor: '#dc2626'
+                        },
+                        {
+                            label: 'Profit',
+                            data: monthlyProfit,
+                            backgroundColor: '#22c55e'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function loadPaymentMethodChart() {
+            const cashTotal = sales.filter(s => s.paymentType === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const mpesaTotal = sales.filter(s => s.paymentType === 'mpesa').reduce((sum, s) => sum + s.total, 0);
+            
+            if (charts.paymentMethod) charts.paymentMethod.destroy();
+            
+            const ctx = document.getElementById('paymentMethodChart').getContext('2d');
+            charts.paymentMethod = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Cash', 'M-Pesa'],
+                    datasets: [{
+                        data: [cashTotal, mpesaTotal],
+                        backgroundColor: ['#22c55e', '#3b82f6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function loadTopProductsChart() {
+            const productSales = {};
+            sales.forEach(sale => {
+                sale.items.forEach(item => {
+                    if (!productSales[item.description]) productSales[item.description] = 0;
+                    productSales[item.description] += item.subtotal;
+                });
+            });
+            
+            const sorted = Object.entries(productSales)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            if (charts.topProducts) charts.topProducts.destroy();
+            
+            const ctx = document.getElementById('topProductsChart').getContext('2d');
+            charts.topProducts = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(p => p[0].substring(0, 15)),
+                    datasets: [{
+                        label: 'Revenue',
+                        data: sorted.map(p => p[1]),
+                        backgroundColor: '#8b5cf6'
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function loadHourlyChart() {
+            const hourlyData = Array(24).fill(0);
+            
+            sales.forEach(s => {
+                const hour = new Date(s.timestamp).getHours();
+                hourlyData[hour] += s.total;
+            });
+            
+            if (charts.hourly) charts.hourly.destroy();
+            
+            const ctx = document.getElementById('hourlyChart').getContext('2d');
+            charts.hourly = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                    datasets: [{
+                        label: 'Sales',
+                        data: hourlyData,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function loadProfitTrendChart() {
+            const days = 30;
+            const labels = [];
+            const data = [];
+            
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toDateString();
+                
+                labels.push(date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
+                
+                const dayProfit = sales
+                    .filter(s => new Date(s.timestamp).toDateString() === dateStr)
+                    .reduce((sum, s) => sum + (s.profit || s.total * 0.3), 0);
+                data.push(dayProfit);
+            }
+            
+            if (charts.profitTrend) charts.profitTrend.destroy();
+            
+            const ctx = document.getElementById('profitTrendChart').getContext('2d');
+            charts.profitTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit',
+                        data: data,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // ========== SETTINGS ==========
+        function saveStoreSettings() {
+            const settings = {
+                name: document.getElementById('storeName').value,
+                phone: document.getElementById('storePhone').value,
+                address: document.getElementById('storeAddress').value
+            };
+            localStorage.setItem('storeSettings', JSON.stringify(settings));
+            showToast('Store settings saved!', 'green');
+        }
+
+        function saveInventorySettings() {
+            const settings = {
+                lowStockLevel: document.getElementById('lowStockLevel').value,
+                taxRate: document.getElementById('taxRate').value,
+                enableNotifications: document.getElementById('enableNotifications').checked
+            };
+            localStorage.setItem('inventorySettings', JSON.stringify(settings));
+            showToast('Inventory settings saved!', 'green');
+        }
+
+        function saveReceiptSettings() {
+            const settings = {
+                header: document.getElementById('receiptHeader').value,
+                footer: document.getElementById('receiptFooter').value,
+                printLogo: document.getElementById('printLogo').checked
+            };
+            localStorage.setItem('receiptSettings', JSON.stringify(settings));
+            showToast('Receipt settings saved!', 'green');
+        }
+
+        function exportAllData() {
+            // Export products
+            let productsCSV = 'Barcode,Name,Cost,Price,Stock,Category\n';
+            products.forEach(p => {
+                productsCSV += `${p.barcode},"${p.description}",${p.cost},${p.price},${p.stock},${p.category || ''}\n`;
+            });
+            downloadCSV(productsCSV, 'products_export.csv');
+            
+            // Export sales
+            exportSales();
+            
+            showToast('Data exported!', 'green');
+        }
+
+        function backupDatabase() {
+            const backup = {
+                products: products,
+                sales: sales,
+                settings: {
+                    store: JSON.parse(localStorage.getItem('storeSettings') || '{}'),
+                    inventory: JSON.parse(localStorage.getItem('inventorySettings') || '{}'),
+                    receipt: JSON.parse(localStorage.getItem('receiptSettings') || '{}')
+                },
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chairman_pos_backup_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            
+            showToast('Backup created!', 'green');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,.csv';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                const text = await file.text();
+                
+                try {
+                    const data = JSON.parse(text);
+                    if (data.products) products = data.products;
+                    if (data.sales) sales = data.sales;
+                    
+                    renderProducts();
+                    renderSales();
+                    showToast('Data imported!', 'green');
+                } catch(err) {
+                    showToast('Invalid file format', 'red');
+                }
+            };
+            input.click();
+        }
+
+        // ========== UTILITIES ==========
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        }
+
+        function showToast(message, color = 'blue') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `fixed bottom-4 right-4 px-5 py-3 rounded-lg shadow-lg text-white z-50 bg-${color}-600`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function reprintReceipt(saleId) {
+            showToast('Reprinting receipt #' + saleId, 'blue');
+            // Implement actual reprint logic
+        }
+
+        function printReport(type) {
+            window.print();
+        }
+    </script>
+</body>
+</html>

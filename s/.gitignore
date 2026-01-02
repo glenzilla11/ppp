@@ -1,0 +1,43 @@
+# Configuration & Sensitive Data
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*.swo
+*~
+
+# Node modules (if used)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Composer (if used)
+vendor/
+composer.lock
+
+# Build & Dist
+dist/
+build/
+*.min.js
+*.min.css
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+.cache/
+
+# Debug files
+debug/
+error_log
