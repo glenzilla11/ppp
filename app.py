@@ -22,7 +22,7 @@ CORS(app)
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'kireru',
-    'passwd': 'kireru',
+    'passwd': 'Kireru@2025',
     'db': 'zilla',
     'charset': 'utf8mb4'
 }
