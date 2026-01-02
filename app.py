@@ -21,8 +21,8 @@ CORS(app)
 # ================================================================
 DB_CONFIG = {
     'host': 'localhost',
-    'user': 'root',
-    'passwd': '',
+    'user': 'kireru',
+    'passwd': 'kireru',
     'db': 'zilla',
     'charset': 'utf8mb4'
 }
